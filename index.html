@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>スプラトゥーン3 武器ランダム抽選</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f0f8ff;
+            margin: 0;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            color: #333;
+        }
+        h1 {
+            color: #ff6b6b;
+            text-align: center;
+            margin-bottom: 5px;
+        }
+        .creator {
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 20px;
+        }
+        .control-panel {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .player-count-buttons {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 5px;
+            margin-bottom: 15px;
+        }
+        .player-count-btn {
+            padding: 5px;
+            border: none;
+            border-radius: 5px;
+            background-color: #e0e0e0;
+            cursor: pointer;
+            transition: background 0.3s;
+            text-align: center;
+            font-size: 12px;
+        }
+        .player-count-btn.selected {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .action-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4CAF50;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        #redrawButton {
+            background-color: #ff6b6b;
+        }
+        #drawStage {
+            background-color: #2196F3;
+        }
+        .mode-selector {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        .mode-btn {
+            padding: 8px 15px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            background: white;
+            cursor: pointer;
+        }
+        .mode-btn.selected {
+            border-color: #4CAF50;
+            background: #e8f5e9;
+        }
+        .mode-btn.disabled {
+            background: #f0f0f0;
+            color: #aaa;
+            cursor: not-allowed;
+            border-color: #ddd;
+        }
+        .results-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .team-container {
+            flex: 1;
+            min-width: 300px;
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .chart-container {
+            position: relative;
+            height: 200px;
+            width: 100%;
+            margin-bottom: 15px;
+        }
+        .team-header {
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            display: inline-block;
+        }
+        .team-alpha {
+            background-color: #ffb6c1;
+            color: #8b0000;
+        }
+        .team-beta {
+            background-color: #98fb98;
+            color: #006400;
+        }
+        .weapons-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 15px;
+        }
+        .weapon-card {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        .weapon-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .weapon-name {
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 5px;
+            color: #2c3e50;
+        }
+        .player-name {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .weapon-type {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-bottom: 10px;
+            color: white;
+        }
+        .weapon-abilities {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .sub, .special {
+            padding: 8px;
+            border-radius: 5px;
+            font-size: 13px;
+        }
+        .sub {
+            background-color: #e3f2fd;
+        }
+        .special {
+            background-color: #fff8e1;
+        }
+        .weapon-stats {
+            font-size: 13px;
+            padding-top: 10px;
+            border-top: 1px dashed #ddd;
+            display: flex;
+            justify-content: space-between;
+        }
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+        }
+        .stat-label {
+            font-weight: bold;
+            color: #666;
+            font-size: 11px;
+        }
+        .stat-value {
+            font-size: 12px;
+        }
+        .name-inputs {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .name-input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .matching-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .matching-table th, .matching-table td {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        .matching-table th {
+            background-color: #f2f2f2;
+        }
+        .matching-table tr:last-child td {
+            border-bottom: none;
+        }
+        @media (max-width: 768px) {
+            .player-count-buttons {
+                grid-template-columns: repeat(4, 1fr);
+            }
+            .weapons-grid {
+                grid-template-columns: 1fr;
+            }
+            .name-inputs {
+                grid-template-columns: 1fr;
+            }
+            .team-container {
+                min-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Ink Roller</h1>
+    <div class="creator">製作者: Your Name</div>
+    
+    <div class="control-panel">
+        <div class="player-count-buttons">
+            <div class="player-count-btn" data-count="1">1人</div>
+            <div class="player-count-btn" data-count="2">2人</div>
+            <div class="player-count-btn" data-count="3">3人</div>
+            <div class="player-count-btn" data-count="4">4人</div>
+            <div class="player-count-btn" data-count="5">5人</div>
+            <div class="player-count-btn" data-count="6">6人</div>
+            <div class="player-count-btn" data-count="7">7人</div>
+            <div class="player-count-btn" data-count="8">8人</div>
+        </div>
+        
+        <div id="nameInputSection" class="name-inputs"></div>
+        
+        <div class="action-buttons">
+            <button id="submitNames">抽選開始</button>
+            <button id="redrawButton" style="display:none;">再抽選</button>
+            <button id="drawStage">ステージ抽選</button>
+        </div>
+        
+        <div id="stageResult" style="display:none; padding:8px 12px; background:#fff; border-radius:5px; margin-top:10px; text-align:center;"></div>
+        
+        <div id="modeSelector">
+            <div class="mode-selector">
+                <div class="mode-btn" data-mode="private">プライベートマッチ</div>
+                <div class="mode-btn selected" data-mode="bankara">バンカラマッチ</div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="resultsContainer" class="results-container"></div>
+    <div id="matchingTableContainer" style="display:none;"></div>
+
+    <script>
+        // 武器データ (3つのみサンプル)
+        const weapons = [
+    // シューター
+    { name: "わかばシューター", type: "シューター", sub: "スプラッシュボム", special: "グレートバリア", gear: ["インク効率", "インク回復", "スパジャン短縮"], range: 2.0, speed: "軽量級", matching: "短距離級" },
+    { name: "もみじシューター", type: "シューター", sub: "トーピード", special: "ホップソナー", gear: ["インク効率", "サブ性能", "イカ速さ"], range: 2.0, speed: "軽量級", matching: "短距離級" },
+    { name: "スプラシューター", type: "シューター", sub: "キューバンボム", special: "ウルトラショット", gear: ["メイン性能", "インク回復", "スペ増加"], range: 2.5, speed: "中量級", matching: "中距離級" },
+    { name: "スプラシューターコラボ", type: "シューター", sub: "スプラッシュボム", special: "トリプルトルネード", gear: ["サブ性能", "スペ性能", "イカ速さ"], range: 2.5, speed: "中量級", matching: "中距離級" },
+    { name: "プロモデラーMG", type: "シューター", sub: "タンサンボム", special: "サメライド", gear: ["インク効率", "サブ性能", "スペ増加"], range: 2.0, speed: "軽量級", matching: "短距離級" },
+    { name: "プロモデラーRG", type: "シューター", sub: "スプリンクラー", special: "ナイスダマ", gear: ["インク回復", "メイン性能", "イカ速さ"], range: 2.0, speed: "軽量級", matching: "短距離級" },
+    { name: "N-ZAP85", type: "シューター", sub: "キューバンボム", special: "エナジースタンド", gear: ["スペ増加", "インク効率", "スパジャン短縮"], range: 2.5, speed: "中量級", matching: "中距離級" },
+    { name: "N-ZAP89", type: "シューター", sub: "ロボットボム", special: "デコイチラシ", gear: ["サブ性能", "スペ性能", "イカ速さ"], range: 2.5, speed: "中量級", matching: "中距離級" },
+    { name: "ボールドマーカー", type: "シューター", sub: "カーリングボム", special: "ウルトラハンコ", gear: ["メイン性能", "イカ速さ", "インク回復"], range: 1.5, speed: "軽量級", matching: "短距離級" },
+    { name: "ボールドマーカーネオ", type: "シューター", sub: "ジャンプビーコン", special: "メガホンレーザー", gear: ["スペ増加", "スパジャン短縮", "インク効率"], range: 1.5, speed: "軽量級", matching: "短距離級" },
+    { name: "シャープマーカー", type: "シューター", sub: "クイックボム", special: "カニタンク", gear: ["サブ性能", "メイン性能", "スペ増加"], range: 2.0, speed: "軽量級", matching: "短距離級" },
+    { name: "シャープマーカーネオ", type: "シューター", sub: "キューバンボム", special: "トリプルトルネード", gear: ["スペ性能", "インク回復", "イカ速さ"], range: 2.0, speed: "軽量級", matching: "短距離級" },
+    { name: "プライムシューター", type: "シューター", sub: "ラインマーカー", special: "カニタンク", gear: ["メイン性能", "インク効率", "スペ増加"], range: 3.5, speed: "中量級", matching: "中距離級" },
+    { name: "プライムシューターコラボ", type: "シューター", sub: "キューバンボム", special: "ナイスダマ", gear: ["サブ性能", "スペ性能", "イカ速さ"], range: 3.5, speed: "中量級", matching: "中距離級" },
+    { name: "プライムシューターカスタム", type: "シューター", sub: "ロボットボム", special: "ホップソナー", gear: ["インク回復", "スパジャン短縮", "メイン性能"], range: 3.5, speed: "中量級", matching: "中距離級" },
+    { name: ".52ガロン", type: "シューター", sub: "スプラッシュシールド", special: "メガホンレーザー", gear: ["メイン性能", "インク効率", "スペ増加"], range: 2.5, speed: "中量級", matching: "中距離級" },
+    { name: ".52ガロンデコ", type: "シューター", sub: "カーリングボム", special: "スミナガシート", gear: ["サブ性能", "イカ速さ", "スペ性能"], range: 2.5, speed: "中量級", matching: "中距離級" },
+    { name: ".96ガロン", type: "シューター", sub: "スプリンクラー", special: "キューインキ", gear: ["インク効率", "メイン性能", "スペ増加"], range: 3.0, speed: "中量級", matching: "中距離級" },
+    { name: ".96ガロンデコ", type: "シューター", sub: "スプラッシュシールド", special: "テイオウイカ", gear: ["サブ性能", "インク回復", "スペ性能"], range: 3.0, speed: "中量級", matching: "中距離級" },
+    { name: "ジェットスイーパー", type: "シューター", sub: "ラインマーカー", special: "キューインキ", gear: ["メイン性能", "インク効率", "スパジャン短縮"], range: 4.0, speed: "重量級", matching: "長距離級" },
+    { name: "ジェットスイーパーカスタム", type: "シューター", sub: "ポイズンミスト", special: "アメフラシ", gear: ["サブ性能", "スペ性能", "イカ速さ"], range: 4.0, speed: "重量級", matching: "長距離級" },
+    { name: "スペースシューター", type: "シューター", sub: "ポイントセンサー", special: "メガホンレーザー", gear: ["スペ増加", "インク回復", "メイン性能"], range: 2.5, speed: "中量級", matching: "中距離級" },
+    { name: "スペースシューターコラボ", type: "シューター", sub: "トラップ", special: "ジェットパック", gear: ["サブ性能", "インク効率", "スペ性能"], range: 2.5, speed: "中量級", matching: "中距離級" },
+
+    // ローラー
+    { name: "スプラローラー", type: "ローラー", sub: "カーリングボム", special: "グレートバリア", gear: ["メイン性能", "インク効率", "イカ速さ"], range: 2.0, speed: "中量級", matching: "中距離級" },
+    { name: "スプラローラーコラボ", type: "ローラー", sub: "ジャンプビーコン", special: "テイオウイカ", gear: ["サブ性能", "スペ増加", "スパジャン短縮"], range: 2.0, speed: "中量級", matching: "中距離級" },
+    { name: "カーボンローラー", type: "ローラー", sub: "ロボットボム", special: "ショクワンダー", gear: ["イカ速さ", "メイン性能", "インク回復"], range: 1.5, speed: "軽量級", matching: "短距離級" },
+    { name: "カーボンローラーデコ", type: "ローラー", sub: "クイックボム", special: "ウルトラショット", gear: ["サブ性能", "スペ性能", "インク効率"], range: 1.5, speed: "軽量級", matching: "短距離級" },
+    { name: "ヴァリアブルローラー", type: "ローラー", sub: "トラップ", special: "マルチミサイル", gear: ["メイン性能", "インク効率", "スペ増加"], range: 2.5, speed: "中量級", matching: "中距離級" },
+    { name: "ヴァリアブルローラーフォイル", type: "ローラー", sub: "キューバンボム", special: "スミナガシート", gear: ["サブ性能", "イカ速さ", "スペ性能"], range: 2.5, speed: "中量級", matching: "中距離級" },
+    { name: "ダイナモローラー", type: "ローラー", sub: "スプリンクラー", special: "エナジースタンド", gear: ["インク回復", "メイン性能", "スパジャン短縮"], range: 3.0, speed: "重量級", matching: "重量級" },
+    { name: "ダイナモローラーテスラ", type: "ローラー", sub: "スプラッシュボム", special: "デコイチラシ", gear: ["サブ性能", "スペ性能", "インク効率"], range: 3.0, speed: "重量級", matching: "重量級" },
+
+    // チャージャー
+    { name: "スプラチャージャー", type: "チャージャー", sub: "スプラッシュボム", special: "キューインキ", gear: ["メイン性能", "インク効率", "スペ増加"], range: 4.5, speed: "重量級", matching: "長距離チャージャー級" },
+    { name: "スプラチャージャーコラボ", type: "チャージャー", sub: "スプラッシュシールド", special: "トリプルトルネード", gear: ["サブ性能", "イカ速さ", "スペ性能"], range: 4.5, speed: "重量級", matching: "長距離チャージャー級" },
+    { name: "スクイックリンα", type: "チャージャー", sub: "ポイントセンサー", special: "グレートバリア", gear: ["スペ増加", "インク回復", "スパジャン短縮"], range: 3.5, speed: "軽量級", matching: "短距離チャージャー級" },
+    { name: "スクイックリンβ", type: "チャージャー", sub: "ロボットボム", special: "ショクワンダー", gear: ["サブ性能", "メイン性能", "インク効率"], range: 3.5, speed: "軽量級", matching: "短距離チャージャー級" },
+    { name: "リッター4K", type: "チャージャー", sub: "トラップ", special: "ホップソナー", gear: ["メイン性能", "インク効率", "スペ増加"], range: 5.0, speed: "重量級", matching: "長距離チャージャー級" },
+    { name: "リッター4Kカスタム", type: "チャージャー", sub: "ジャンプビーコン", special: "テイオウイカ", gear: ["サブ性能", "イカ速さ", "スペ性能"], range: 5.0, speed: "重量級", matching: "長距離チャージャー級" },
+    { name: "14式竹筒銃・甲", type: "チャージャー", sub: "ロボットボム", special: "メガホンレーザー", gear: ["インク回復", "メイン性能", "スパジャン短縮"], range: 2.5, speed: "軽量級", matching: "短距離チャージャー級" },
+    { name: "14式竹筒銃・乙", type: "チャージャー", sub: "タンサンボム", special: "デコイチラシ", gear: ["サブ性能", "スペ性能", "インク効率"], range: 2.5, speed: "軽量級", matching: "短距離チャージャー級" },
+
+    // ブラスター
+    { name: "ホットブラスター", type: "ブラスター", sub: "ロボットボム", special: "グレートバリア", gear: ["メイン性能", "インク効率", "スペ増加"], range: 2.0, speed: "軽量級", matching: "短距離級" },
+    { name: "ホットブラスターカスタム", type: "ブラスター", sub: "ポイントセンサー", special: "ウルトラチャクチ", gear: ["サブ性能", "イカ速さ", "スペ性能"], range: 2.0, speed: "軽量級", matching: "短距離級" },
+    { name: "ラピッドブラスター", type: "ブラスター", sub: "トラップ", special: "トリプルトルネード", gear: ["インク回復", "メイン性能", "スパジャン短縮"], range: 3.5, speed: "中量級", matching: "中距離級" },
+    { name: "ラピッドブラスターデコ", type: "ブラスター", sub: "トーピード", special: "ジェットパック", gear: ["サブ性能", "スペ性能", "インク効率"], range: 3.5, speed: "中量級", matching: "中距離級" },
+    { name: "ロングブラスター", type: "ブラスター", sub: "キューバンボム", special: "ホップソナー", gear: ["メイン性能", "インク効率", "スペ増加"], range: 3.0, speed: "中量級", matching: "中距離級" },
+    { name: "ロングブラスターカスタム", type: "ブラスター", sub: "スプラッシュボム", special: "テイオウイカ", gear: ["サブ性能", "イカ速さ", "スペ性能"], range: 3.0, speed: "中量級", matching: "中距離級" },
+
+    // スロッシャー
+    { name: "バケットスロッシャー", type: "スロッシャー", sub: "スプラッシュボム", special: "トリプルトルネード", gear: ["インク回復", "メイン性能", "スパジャン短縮"], range: 2.5, speed: "中量級", matching: "中距離級" },
+    { name: "バケットスロッシャーデコ", type: "スロッシャー", sub: "ラインマーカー", special: "ショクワンダー", gear: ["サブ性能", "スペ性能", "インク効率"], range: 2.5, speed: "中量級", matching: "中距離級" },
+    { name: "ヒッセン", type: "スロッシャー", sub: "ポイズンミスト", special: "ジェットパック", gear: ["メイン性能", "イカ速さ", "インク効率"], range: 2.0, speed: "軽量級", matching: "短距離級" },
+    { name: "ヒッセン・ヒュー", type: "スロッシャー", sub: "タンサンボム", special: "エナジースタンド", gear: ["サブ性能", "スペ増加", "インク回復"], range: 2.0, speed: "軽量級", matching: "短距離級" },
+    { name: "エクスプロッシャー", type: "スロッシャー", sub: "ポイントセンサー", special: "アメフラシ", gear: ["インク効率", "メイン性能", "スパジャン短縮"], range: 3.5, speed: "重量級", matching: "重量級" },
+    { name: "エクスプロッシャーカスタム", type: "スロッシャー", sub: "スプラッシュシールド", special: "ウルトラチャクチ", gear: ["サブ性能", "スペ性能", "イカ速さ"], range: 3.5, speed: "重量級", matching: "重量級" },
+
+    // スピナー
+    { name: "スプラスピナー", type: "スピナー", sub: "クイックボム", special: "ウルトラハンコ", gear: ["メイン性能", "インク効率", "スペ増加"], range: 3.0, speed: "中量級", matching: "中距離級" },
+    { name: "スプラスピナーコラボ", type: "スピナー", sub: "ポイズンミスト", special: "グレートバリア", gear: ["サブ性能", "イカ速さ", "スペ性能"], range: 3.0, speed: "中量級", matching: "中距離級" },
+    { name: "ハイドラント", type: "スピナー", sub: "ロボットボム", special: "ナイスダマ", gear: ["インク回復", "メイン性能", "スパジャン短縮"], range: 4.5, speed: "重量級", matching: "長距離級" },
+    { name: "ハイドラントカスタム", type: "スピナー", sub: "トラップ", special: "メガホンレーザー", gear: ["サブ性能", "スペ性能", "インク効率"], range: 4.5, speed: "重量級", matching: "長距離級" },
+    { name: "バレルスピナー", type: "スピナー", sub: "スプリンクラー", special: "ホップソナー", gear: ["メイン性能", "インク効率", "スペ増加"], range: 4.0, speed: "重量級", matching: "長距離級" },
+    { name: "バレルスピナーデコ", type: "スピナー", sub: "ポイントセンサー", special: "テイオウイカ", gear: ["サブ性能", "イカ速さ", "スペ性能"], range: 4.0, speed: "重量級", matching: "長距離級" },
+
+    // マニューバー
+    { name: "スプラマニューバー", type: "マニューバー", sub: "キューバンボム", special: "カニタンク", gear: ["インク回復", "メイン性能", "スパジャン短縮"], range: 2.0, speed: "中量級", matching: "中距離級" },
+    { name: "スプラマニューバーコラボ", type: "マニューバー", sub: "カーリングボム", special: "ウルトラチャクチ", gear: ["サブ性能", "スペ性能", "インク効率"], range: 2.0, speed: "中量級", matching: "中距離級" },
+    { name: "スパッタリー", type: "マニューバー", sub: "ジャンプビーコン", special: "エナジースタンド", gear: ["メイン性能", "イカ速さ", "インク効率"], range: 1.5, speed: "軽量級", matching: "短距離級" },
+    { name: "スパッタリー・ヒュー", type: "マニューバー", sub: "トーピード", special: "サメライド", gear: ["サブ性能", "スペ増加", "インク回復"], range: 1.5, speed: "軽量級", matching: "短距離級" },
+    { name: "ガエンFF", type: "マニューバー", sub: "トラップ", special: "メガホンレーザー", gear: ["インク効率", "メイン性能", "スパジャン短縮"], range: 3.0, speed: "中量級", matching: "中距離級" },
+    { name: "ガエンFFカスタム", type: "マニューバー", sub: "クイックボム", special: "トリプルトルネード", gear: ["サブ性能", "スペ性能", "イカ速さ"], range: 3.0, speed: "中量級", matching: "中距離級" },
+
+    // シェルター
+    { name: "パラシェルター", type: "シェルター", sub: "スプリンクラー", special: "トリプルトルネード", gear: ["メイン性能", "インク効率", "スペ増加"], range: 2.0, speed: "軽量級", matching: "短距離級" },
+    { name: "パラシェルターソレーラ", type: "シェルター", sub: "ロボットボム", special: "ジェットパック", gear: ["サブ性能", "イカ速さ", "スペ性能"], range: 2.0, speed: "軽量級", matching: "短距離級" },
+    { name: "キャンピングシェルター", type: "シェルター", sub: "ジャンプビーコン", special: "キューインキ", gear: ["インク回復", "メイン性能", "スパジャン短縮"], range: 2.5, speed: "中量級", matching: "中距離級" },
+    { name: "キャンピングシェルターソレーラ", type: "シェルター", sub: "トラップ", special: "ウルトラショット", gear: ["サブ性能", "スペ性能", "インク効率"], range: 2.5, speed: "中量級", matching: "中距離級" },
+    { name: "24式張替傘・甲", type: "シェルター", sub: "ラインマーカー", special: "グレートバリア", gear: ["メイン性能", "イカ速さ", "インク効率"], range: 2.0, speed: "軽量級", matching: "短距離級" },
+    { name: "24式張替傘・乙", type: "シェルター", sub: "ポイズンミスト", special: "ウルトラチャクチ", gear: ["サブ性能", "スペ増加", "インク回復"], range: 2.0, speed: "軽量級", matching: "短距離級" },
+
+    // フデ
+    { name: "ホクサイ", type: "フデ", sub: "キューバンボム", special: "ショクワンダー", gear: ["インク効率", "メイン性能", "スパジャン短縮"], range: 1.5, speed: "軽量級", matching: "短距離級" },
+    { name: "パブロ", type: "フデ", sub: "スプラッシュボム", special: "メガホンレーザー", gear: ["サブ性能", "イカ速さ", "スペ性能"], range: 1.0, speed: "軽量級", matching: "短距離級" },
+    { name: "パブロヒュー", type: "フデ", sub: "トラップ", special: "ウルトラハンコ", gear: ["インク回復", "スペ増加", "メイン性能"], range: 1.0, speed: "軽量級", matching: "短距離級" },
+
+    // ストリンガー
+    { name: "トライストリンガー", type: "ストリンガー", sub: "ポイズンミスト", special: "メガホンレーザー", gear: ["メイン性能", "インク効率", "スパジャン短縮"], range: 4.0, speed: "重量級", matching: "長距離級" },
+    { name: "トライストリンガーコラボ", type: "ストリンガー", sub: "スプリンクラー", special: "デコイチラシ", gear: ["サブ性能", "スペ性能", "イカ速さ"], range: 4.0, speed: "重量級", matching: "長距離級" },
+    { name: "LACT-450", type: "ストリンガー", sub: "カーリングボム", special: "マルチミサイル", gear: ["インク回復", "メイン性能", "スペ増加"], range: 3.5, speed: "中量級", matching: "中距離級" },
+    { name: "LACT-450カスタム", type: "ストリンガー", sub: "スプラッシュシールド", special: "サメライド", gear: ["サブ性能", "イカ速さ", "スペ性能"], range: 3.5, speed: "中量級", matching: "中距離級" },
+    { name: "フルイドV", type: "ストリンガー", sub: "ロボットボム", special: "ウルトラハンコ", gear: ["インク効率", "メイン性能", "スパジャン短縮"], range: 3.0, speed: "中量級", matching: "中距離級" },
+    { name: "フルイドVカスタム", type: "ストリンガー", sub: "ポイントセンサー", special: "ホップソナー", gear: ["サブ性能", "スペ性能", "インク回復"], range: 3.0, speed: "中量級", matching: "中距離級" },
+
+    // ワイパー
+    { name: "ドライブワイパー", type: "ワイパー", sub: "トーピード", special: "ウルトラハンコ", gear: ["メイン性能", "イカ速さ", "インク効率"], range: 2.0, speed: "軽量級", matching: "短距離級" },
+    { name: "ドライブワイパーデコ", type: "ワイパー", sub: "ジャンプビーコン", special: "マルチミサイル", gear: ["サブ性能", "スペ増加", "インク回復"], range: 2.0, speed: "軽量級", matching: "短距離級" },
+    { name: "ジムワイパー", type: "ワイパー", sub: "クイックボム", special: "ショクワンダー", gear: ["インク効率", "メイン性能", "スパジャン短縮"], range: 3.0, speed: "中量級", matching: "中距離級" },
+    { name: "ジムワイパー・ヒュー", type: "ワイパー", sub: "ポイズンミスト", special: "カニタンク", gear: ["サブ性能", "スペ性能", "イカ速さ"], range: 3.0, speed: "中量級", matching: "中距離級" },
+    { name: "デンタルワイパーミント", type: "ワイパー", sub: "キューバンボム", special: "グレートバリア", gear: ["インク回復", "メイン性能", "スペ増加"], range: 2.5, speed: "中量級", matching: "中距離級" },
+    { name: "デンタルワイパースミ", type: "ワイパー", sub: "スプラッシュシールド", special: "ジェットパック", gear: ["サブ性能", "イカ速さ", "スペ性能"], range: 2.5, speed: "中量級", matching: "中距離級" }
+    ];
+
+        // 武器種ごとの色
+        const typeColors = {
+            "シューター": "#FF6666", "ローラー": "#66FF66", "チャージャー": "#6666FF",
+            "ブラスター": "#FF9966", "スロッシャー": "#CC66FF", "スピナー": "#66CCCC",
+            "マニューバー": "#FF99CC", "シェルター": "#99CC66", "フデ": "#CC9966",
+            "ストリンガー": "#66CCFF", "ワイパー": "#FFCC99"
+        };
+
+        // ステージデータ
+        const stages = [
+            "ユノハナ大渓谷", "ゴンズイ地区", "ヤガラ市場", 
+            "マテガイ放水路", "ナメロウ金属", "マサバ海峡大橋",
+            "キンメダイ美術館", "マヒマヒリゾート＆スパ"
+        ];
+
+        // 現在のモード (private or bankara)
+        let currentMode = 'bankara';
+        let currentPlayerCount = 4;
+        let playerNames = [];
+        let lastStage = '';
+
+        // 初期化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 人数選択ボタン
+            document.querySelectorAll('.player-count-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.player-count-btn').forEach(b => b.classList.remove('selected'));
+                    this.classList.add('selected');
+                    currentPlayerCount = parseInt(this.dataset.count);
+                    createNameInputs(currentPlayerCount);
+                    updateModeButtons();
+                });
+            });
+            
+            // デフォルトで4人選択
+            document.querySelector('.player-count-btn[data-count="4"]').classList.add('selected');
+            createNameInputs(4);
+            updateModeButtons();
+            
+            // モード選択ボタン
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    if (this.classList.contains('disabled')) return;
+                    
+                    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('selected'));
+                    this.classList.add('selected');
+                    currentMode = this.dataset.mode;
+                });
+            });
+            
+            // ボタンイベントリスナー
+            document.getElementById("submitNames").addEventListener("click", function() {
+                savePlayerNames();
+                startLottery();
+            });
+            document.getElementById("redrawButton").addEventListener("click", handleRedraw);
+            document.getElementById("drawStage").addEventListener("click", drawRandomStage);
+        });
+
+        function updateModeButtons() {
+            const privateBtn = document.querySelector('.mode-btn[data-mode="private"]');
+            const bankaraBtn = document.querySelector('.mode-btn[data-mode="bankara"]');
+            
+            // 1人モードの場合はプライベートマッチを無効化
+            if (currentPlayerCount === 1) {
+                privateBtn.classList.add('disabled');
+                if (currentMode === 'private') {
+                    currentMode = 'bankara';
+                    document.querySelector('.mode-btn[data-mode="bankara"]').classList.add('selected');
+                    privateBtn.classList.remove('selected');
+                }
+            } else {
+                privateBtn.classList.remove('disabled');
+            }
+            
+            // 5人以上の場合はバンカラマッチを無効化
+            if (currentPlayerCount >= 5) {
+                bankaraBtn.classList.add('disabled');
+                if (currentMode === 'bankara') {
+                    currentMode = 'private';
+                    document.querySelector('.mode-btn[data-mode="private"]').classList.add('selected');
+                    bankaraBtn.classList.remove('selected');
+                }
+            } else {
+                bankaraBtn.classList.remove('disabled');
+            }
+        }
+
+        function savePlayerNames() {
+            playerNames = [];
+            for (let i = 0; i < currentPlayerCount; i++) {
+                const nameInput = document.getElementById(`name${i}`);
+                const name = nameInput ? nameInput.value || `プレイヤー${i+1}` : `プレイヤー${i+1}`;
+                playerNames.push(name);
+            }
+        }
+
+        function createNameInputs(count) {
+            let html = '';
+            for (let i = 0; i < count; i++) {
+                const savedName = playerNames[i] || '';
+                html += `<input type="text" id="name${i}" placeholder="プレイヤー${i+1}" value="${savedName}" class="name-input">`;
+            }
+            document.getElementById("nameInputSection").innerHTML = html;
+        }
+
+        function drawRandomStage() {
+            const randomStage = stages[Math.floor(Math.random() * stages.length)];
+            lastStage = randomStage;
+            document.getElementById("stageResult").textContent = `ステージ: ${randomStage}`;
+            document.getElementById("stageResult").style.display = "block";
+        }
+
+        function handleRedraw() {
+            savePlayerNames();
+            startLottery();
+            
+            if (currentMode === 'private') {
+                drawRandomStage();
+            }
+        }
+
+        function startLottery() {
+            document.getElementById("redrawButton").style.display = "inline-block";
+            
+            const selectedWeapons = drawWeapons(currentPlayerCount);
+            
+            if (currentMode === 'bankara') {
+                adjustRangesForBankara(selectedWeapons);
+            }
+            
+            if (currentPlayerCount >= 5 || currentMode === 'private') {
+                const { teamAlpha, teamBeta } = splitTeamsWithBalance(playerNames, selectedWeapons);
+                displayPrivateMatchResults(teamAlpha, teamBeta);
+            } else {
+                displayBankaraMatchResults(playerNames, selectedWeapons);
+            }
+            
+            displayMatchingTable();
+        }
+
+        function drawWeapons(playerCount) {
+            const shuffled = [...weapons].sort(() => Math.random() - 0.5);
+            const selected = [];
+            const typeCount = {};
+            
+            for (const weapon of shuffled) {
+                if ((typeCount[weapon.type] || 0) >= 2) continue;
+                selected.push(weapon);
+                typeCount[weapon.type] = (typeCount[weapon.type] || 0) + 1;
+                if (selected.length >= playerCount) break;
+            }
+            
+            while (selected.length < playerCount) {
+                const remaining = weapons.filter(w => !selected.includes(w));
+                if (remaining.length === 0) break;
+                selected.push(remaining[Math.floor(Math.random() * remaining.length)]);
+            }
+            
+            return selected;
+        }
+
+        function adjustRangesForBankara(weapons) {
+            const avgRange = weapons.reduce((sum, weapon) => sum + weapon.range, 0) / weapons.length;
+            const targetAvg = Math.min(Math.max(avgRange, 2.5), 4);
+            
+            if (Math.abs(avgRange - targetAvg) > 0.1) {
+                const factor = targetAvg / avgRange;
+                weapons.forEach(weapon => {
+                    weapon.range = Math.min(Math.max(weapon.range * factor, 1), 5);
+                });
+            }
+        }
+
+        function splitTeamsWithBalance(playerNames, weapons) {
+            let bestAlpha = { players: [], weapons: [], rangeSum: 0 };
+            let bestBeta = { players: [], weapons: [], rangeSum: 0 };
+            let minDiff = Infinity;
+            
+            for (let i = 0; i < 100; i++) {
+                const shuffled = [...weapons].sort(() => Math.random() - 0.5);
+                const teamAlpha = { players: [], weapons: [], rangeSum: 0 };
+                const teamBeta = { players: [], weapons: [], rangeSum: 0 };
+                
+                shuffled.forEach((weapon, index) => {
+                    const player = playerNames[index];
+                    if (index % 2 === 0) {
+                        teamAlpha.players.push(player);
+                        teamAlpha.weapons.push(weapon);
+                        teamAlpha.rangeSum += weapon.range;
+                    } else {
+                        teamBeta.players.push(player);
+                        teamBeta.weapons.push(weapon);
+                        teamBeta.rangeSum += weapon.range;
+                    }
+                });
+                
+                const diff = Math.abs((teamAlpha.rangeSum / teamAlpha.weapons.length) - 
+                             (teamBeta.rangeSum / teamBeta.weapons.length));
+                
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    bestAlpha = {...teamAlpha};
+                    bestBeta = {...teamBeta};
+                    
+                    if (minDiff <= 1.0) break;
+                }
+            }
+            
+            return { teamAlpha: bestAlpha, teamBeta: bestBeta };
+        }
+
+        function displayPrivateMatchResults(teamAlpha, teamBeta) {
+            const container = document.getElementById("resultsContainer");
+            container.innerHTML = '';
+            
+            if (teamAlpha.players.length > 0) {
+                const alphaDiv = document.createElement('div');
+                alphaDiv.className = 'team-container';
+                alphaDiv.innerHTML = `
+                    <div class="team-header team-alpha">チームアルファ</div>
+                    <div class="chart-container">
+                        <canvas></canvas>
+                    </div>
+                    ${createTeamHTML(teamAlpha)}
+                `;
+                container.appendChild(alphaDiv);
+                createBarChart(alphaDiv.querySelector('canvas'), teamAlpha, 'rgb(255, 182, 193)');
+            }
+            
+            if (teamBeta.players.length > 0) {
+                const betaDiv = document.createElement('div');
+                betaDiv.className = 'team-container';
+                betaDiv.innerHTML = `
+                    <div class="team-header team-beta">チームベータ</div>
+                    <div class="chart-container">
+                        <canvas></canvas>
+                    </div>
+                    ${createTeamHTML(teamBeta)}
+                `;
+                container.appendChild(betaDiv);
+                createBarChart(betaDiv.querySelector('canvas'), teamBeta, 'rgb(152, 251, 152)');
+            }
+            
+            if (lastStage) {
+                document.getElementById("stageResult").textContent = `ステージ: ${lastStage}`;
+                document.getElementById("stageResult").style.display = "block";
+            }
+        }
+
+        function displayBankaraMatchResults(playerNames, weapons) {
+            const container = document.getElementById("resultsContainer");
+            container.innerHTML = `
+                <div class="team-container">
+                    <div class="team-header">バンカラマッチ</div>
+                    <div class="chart-container">
+                        <canvas></canvas>
+                    </div>
+                    ${createTeamHTML({players: playerNames, weapons: weapons})}
+                </div>
+            `;
+            createBarChart(container.querySelector('canvas'), 
+                         {players: playerNames, weapons: weapons}, 
+                         'rgba(75, 192, 192, 0.2)');
+        }
+
+        function createBarChart(canvas, team, color) {
+            const ctx = canvas.getContext('2d');
+            
+            // 既存のグラフを破棄
+            if (canvas.chart) {
+                canvas.chart.destroy();
+            }
+            
+            const labels = team.players.map((player, i) => `${player}\n${team.weapons[i].name}`);
+            const data = team.weapons.map(w => w.range);
+            const backgroundColors = team.weapons.map(w => typeColors[w.type] + '80');
+            const borderColors = team.weapons.map(w => typeColors[w.type]);
+            const avgRange = team.rangeSum ? team.rangeSum / team.weapons.length : 
+                          data.reduce((a, b) => a + b, 0) / data.length;
+            
+            canvas.chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: '射程',
+                            data: data,
+                            backgroundColor: backgroundColors,
+                            borderColor: borderColors,
+                            borderWidth: 1
+                        },
+                        {
+                            label: '平均射程',
+                            data: Array(labels.length).fill(avgRange),
+                            type: 'line',
+                            borderColor: '#666',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            pointRadius: 0,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            max: 5,
+                            ticks: {
+                                stepSize: 1,
+                                callback: value => value
+                            },
+                            title: {
+                                display: true,
+                                text: '射程'
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                autoSkip: false
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + context.raw.toFixed(1);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createTeamHTML(team) {
+            let html = '<div class="weapons-grid">';
+            
+            team.weapons.forEach((weapon, i) => {
+                html += `
+                <div class="weapon-card">
+                    <div class="player-name">${team.players[i]}</div>
+                    <div class="weapon-name">${weapon.name}</div>
+                    <div class="weapon-type" style="background:${typeColors[weapon.type]}">${weapon.type}</div>
+                    <div class="weapon-abilities">
+                        <div class="sub">${weapon.sub}</div>
+                        <div class="special">${weapon.special}</div>
+                    </div>
+                    <div class="weapon-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">移動速度</span>
+                            <span class="stat-value">${weapon.speed}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">マッチング区分</span>
+                            <span class="stat-value">${weapon.matching}</span>
+                        </div>
+                    </div>
+                </div>`;
+            });
+            
+            html += '</div>';
+            return html;
+        }
+
+        function displayMatchingTable() {
+            const matchingGroups = {};
+            
+            weapons.forEach(weapon => {
+                if (!matchingGroups[weapon.matching]) {
+                    matchingGroups[weapon.matching] = [];
+                }
+                matchingGroups[weapon.matching].push(weapon.name);
+            });
+            
+            let html = '<h3>マッチング区分</h3><table class="matching-table"><tr><th>区分</th><th>武器</th></tr>';
+            
+            for (const [group, weapons] of Object.entries(matchingGroups)) {
+                html += `<tr><td>${group}</td><td>${weapons.join(', ')}</td></tr>`;
+            }
+            
+            html += '</table>';
+            document.getElementById("matchingTableContainer").innerHTML = html;
+            document.getElementById("matchingTableContainer").style.display = 'block';
+        }
+    </script>
+</body>
+</html>
